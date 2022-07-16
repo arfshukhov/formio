@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<meta charset="UTF-8">
+<style>
+    #header{
+    background-color: #525299;
+    text-align:center;
+    color: white;
+    font-family: "Microsoft Sans Serif";
+    top:0;
+    z-index: 0;
+    }
+</style>
+<head>
+    <div id="header">
+    <h1>Form.io</h1>
+    </div>
+</head>
+<body>
+<div>
+<h1>Поля вашей формы</h1>
+<div>
+
+</div>
+{% for space in spaces %}
+<div>
+    {{space}}
+</div>
+{% endfor %}
+</div>
+</body>
+</html>
