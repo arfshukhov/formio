@@ -1,3 +1,5 @@
+from typing import List, Any
+
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
@@ -7,44 +9,71 @@ from db_ops import *
 import json
 
 
-class Select:
-    def __init__(self, unique_token: str, question: str, variants: list):
-        self.variants = variants
-        self.question = question
-        self.unique_token = unique_token
-        self.code = "".join(["<div>",
-                             f"<h2>{self.question}</h2>",
-                             self.compile(),
-                             "</div>"])
-
-    def compile(self):
-        res = ""
-        for elem in self.variants:
-            res += f"""
-            <input type="radio" id="{elem}" name="{self.unique_token}" value="{elem}"> 
-            <label for="{elem}">{elem}</label><br>
-            """
-        return res
-
-
-class Input:
+class Space:
     def __init__(self, unique_token: str, question: str):
         self.question = question
         self.unique_token = unique_token
+
+    def compile(self, type, *variants):
+        match type:
+            case "input" | "textarea":
+                return "".join(["<div>",
+                                f'<h2>{self.question}</h2>'
+                                f'<input type="{type}", id="{self.question}" name="{self.unique_token}"> ',
+                                '</div>'])
+            case "select":
+                res = f"""<div>
+                <h2>{self.question}</h2>"""
+                for elem in variants:
+                    res += f"""
+                        <input type="radio" id="{elem}" name="{self.unique_token}" value="{elem}"> 
+                        <label for="{elem}">{elem}</label><br>
+                        """
+                else:
+                    res += "</div>"
+                return res
+
+
+class Select(Space):
+    def __init__(self, unique_token: str, question: str, variants: list):
+        super().__init__(unique_token, question)
+        self.variants = variants
+        self.code_select = self.compile("select", self.variants)
+
+
+class Input(Space):
+    def __init__(self, unique_token, question):
+        super().__init__(unique_token, question)
         self.type = "text"
-        self.code = "".join(["<div>",
-                             f'<h2>{self.question}</h2>'
-                             f'<input type="{self.type}", id="{self.question}" name="{self.unique_token}"> ',
-                             '</div>'])
+        self.code = self.compile(self.type)
 
 
-class Textarea(Input):
-    def __init__(self,unique_token: str, question: str):
+class Textarea(Space):
+    def __init__(self, unique_token: str, question: str):
         super().__init__(question, unique_token)
         self.type = "textarea"
+        self.code = self.compile("textarea")
 
 
 class Logic:
+    symbols = ["A", "a", "B", "b", "C", "c", "D", "d", "E", "e", "F", "f", "G", "g",
+               "H", "h", "I", "i", "J", "j", "K", "k", "L", "l", "M", "m", "N", "n",
+               "O", "o", "P", "p", "Q", "q", "R", " r", "S", "s", "T", "t", "U", "u", "V", "v",
+               "W", "w", "X", "x", "Y", "y", "Z", "z", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+
+    @classmethod
+    def generate_form_uid(cls):
+        form_uid = ""
+        for _ in range(64):
+            form_uid += random.choice(cls.symbols)
+
+    @classmethod
+    def create_unique_token(cls):
+
+        token: str = ""
+        for _ in range(32):
+            token += random.choice(cls.symbols)
+        return token
 
     @classmethod
     def get_spaces(cls, form_uid):
@@ -97,9 +126,3 @@ class Renderer(Logic):
     def show_main_window(cls, request, form_uid):
         spaces = cls.prepare_spaces(form_uid)
         content = {'spaces': spaces}
-
-
-
-
-
-
