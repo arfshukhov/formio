@@ -1,0 +1,13 @@
+aiogram
+aiohttp
+aiosignal
+wikipedia
+asgiref
+async-timeout
+Babel
+emoji
+peewee
+pip
+psycopg2
+pgsql
+Pillow

@@ -1,31 +1,80 @@
-import json
-import random
-from django.shortcuts import render, redirect
-from .models import Forms, Spaces
+from peewee import *
+from dataset import *
+import os
+
+db = PostgresqlDatabase(database=database, host=host, user=user, port=5432, password=password)
 
 
-def add_new_form(form_uid, title):
-    Forms(form_uid=form_uid, title=title)
+class Binds(Model):
+    chat_id = TextField(null=False)
+    type = TextField(null=False)
+    phrase = TextField(null=False)
+    answer = TextField(null=False)
+
+    class Meta:
+        database = db
+        db_table = "Binds"
 
 
-def add_new_space(form_uid, unique_token, type, question, *variants):
+class Chat_ids(Model):
+    chat_id = TextField(unique=True)
 
-    if type == "select":
-        Spaces(form_uid=form_uid, unique_token=unique_token, type=type, question=question, variants=variants)
-    elif type in ("input", "textarea"):
-        Spaces(form_uid=form_uid, unique_token=unique_token, type=type, question=question)
-    else:
-        return redirect(f'editor:{form_uid}/')
+    class Meta:
+        database = db
+        db_table = "Ids"
 
 
-def get_dumps_of_spaces(form_uid):
-    temp = Spaces.objects.filter(form_uid=form_uid)
-    json_temp: list = []
-    for elem in temp:
-        json_temp.append(
-            {"form_uid": elem.form_uid,
-             "unique_token": elem.unique_token,
-             "type": elem.type,
-             "question": elem.type,
-             "variants": elem.variants})
-    return json.dumps(json_temp)
+db.connect()
+db.create_tables([Binds, Chat_ids])
+
+
+def add_chat_id(id):
+    try:
+        Chat_ids(chat_id=id).save()
+    except:
+        db.rollback()
+
+def get_ids():
+    try:
+        ids = []
+        for chat in Chat_ids.select():
+            ids.append(chat.chat_id)
+        return ids
+    except:
+        db.rollback()
+
+
+def add_new_bind(chat_id, type, phrase, answer):
+    try:
+        bind = Binds(chat_id=str(chat_id), type=str(type), phrase=str(phrase), answer=str(answer)).save()
+        return "Бинд успешно добавлен!"
+    except Exception as e:
+        db.rollback()
+        return f"Что-то пошло не так. Попробуйте заново или оставьте баг-репорт, вот текст ошибки: \n{e}"
+
+
+
+async def get_binds(chat_id):
+    try:
+        answers = []
+        for binds in Binds.select().where(Binds.chat_id == chat_id):
+            answers.append([binds.type, binds.phrase, binds.answer])
+        return answers
+    except:
+        db.rollback()
+        pass
+
+
+def remove_binds(chat_id, *phrase):
+    try:
+        id = chat_id
+        if phrase:
+            Binds.delete().where(Binds.chat_id == id, Binds.phrase == phrase).execute()
+            return "Бинд успешно удален"
+        else:
+            Binds.delete().where(Binds.chat_id == id).execute()
+            return "Все бинды в вашем чате удалены"
+
+    except Exception as e:
+        db.rollback()
+        return f"Что-то пошло не так. Вот текст ошибки:\n {e} \nОтправьте ее разработчику командой /report"
